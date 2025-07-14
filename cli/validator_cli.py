@@ -1,0 +1,51 @@
+import argparse
+import os
+from validator.bug_checker import analyze_project_folder
+from validator.concept_checker import analyze_project_concept
+from validator.auto_corrector import auto_fix_code
+
+
+def read_all_code(folder_path):
+    """
+    Combine all .py file contents from a folder into one string.
+    Used for sending full codebase to LLaMA for fixing.
+    """
+    combined_code = ""
+    for root, _, files in os.walk(folder_path):
+        for file in files:
+            if file.endswith(".py"):
+                file_path = os.path.join(root, file)
+                with open(file_path, "r") as f:
+                    code = f.read()
+                combined_code += f"\n\n# === {file} ===\n{code}"
+    return combined_code
+
+
+def main():
+    parser = argparse.ArgumentParser(description="🧠 AI Project Validator CLI")
+    parser.add_argument("--path", required=True, help="Path to Python project folder")
+    parser.add_argument("--concept", required=True, help="Project concept/description")
+    parser.add_argument("--fix", action="store_true", help="Apply LLaMA auto-fix to the project")
+
+    args = parser.parse_args()
+
+    print("🔍 Running Bug Checker...")
+    bug_results = analyze_project_folder(args.path)
+    for file, result in bug_results.items():
+        print(f"\n📄 {file} - Bugs Found:\n{result}")
+
+    print("\n🧠 Running Concept Checker...")
+    concept_results = analyze_project_concept(args.path, args.concept)
+    for file, result in concept_results.items():
+        print(f"\n📄 {file} - Concept Match:\n{result}")
+
+    if args.fix:
+        print("\n🤖 Running Auto Fixer (LLaMA 3)...")
+        combined_code = read_all_code(args.path)
+        fixed_code = auto_fix_code(combined_code)
+        print("\n✅ Fixed Version:\n")
+        print(fixed_code)
+
+
+if __name__ == "__main__":
+    main()
