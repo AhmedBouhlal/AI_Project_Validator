@@ -3,6 +3,7 @@ import os
 from validator.bug_checker import analyze_project_folder
 from validator.concept_checker import analyze_project_concept
 from validator.auto_corrector import auto_fix_code
+from utils.ollama_client import ask_llama
 
 
 def read_all_code(folder_path):
@@ -44,17 +45,45 @@ def main():
         combined_code = read_all_code(args.path)
         fixed_code = auto_fix_code(combined_code)
 
-        print("\n✅ Fixed Code Generated. Saving to 'fixed_output/fixed_project.py'...")
-
-        # Create output directory
+        # Save fixed code
         os.makedirs("fixed_output", exist_ok=True)
         output_path = os.path.join("fixed_output", "fixed_project.py")
-
         with open(output_path, "w") as f:
             f.write(fixed_code)
+        print(f"\n✅ Fixed Code Saved: {output_path}")
 
-        print(f"📝 Saved: {output_path}")
+        # 🧠 Generate AI summary of changes
+        print("\n🧠 Generating AI Summary of Fixes...")
 
+        summary_prompt = f"""
+        Here is the original Python project followed by the fixed version.
+
+        Explain what changes were made:
+        - What bugs were fixed?
+        - What optimizations or improvements were done?
+        - What parts were unnecessary and removed?
+        - What is the overall improvement?
+
+        Be clear, list important points as bullet points.
+
+        ORIGINAL CODE:
+        ```python
+        {combined_code}
+        ```
+        FIXED VERSION:
+        ```python
+        {fixed_code}
+        ```
+        """
+
+        summary = ask_llama(summary_prompt)
+
+        print("\n📋 AI Summary of Fixes:")
+        print(summary)
+
+        with open(os.path.join("fixed_output", "summary.txt"), "w") as f:
+            f.write(summary)
+        print("📝 Saved summary to: fixed_output/summary.txt")
 
 
 if __name__ == "__main__":
