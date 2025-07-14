@@ -4,7 +4,7 @@ import subprocess
 from validator.bug_checker import analyze_project_folder
 from validator.concept_checker import analyze_project_concept
 from validator.auto_corrector import auto_fix_code
-from validator.feedback_generator import generate_project_feedback  # ✅ NEW
+from validator.optimizer import optimize_code
 from utils.ollama_client import ask_llama
 
 
@@ -42,31 +42,28 @@ def main():
     for file, result in concept_results.items():
         print(f"\n📄 {file} - Concept Match:\n{result}")
 
-    # ✅ Generate overall AI project feedback
-    print("\n🧠 Generating AI Project-Level Feedback...")
-    full_feedback = generate_project_feedback(bug_results, concept_results, args.concept)
-
-    os.makedirs("fixed_output", exist_ok=True)
-    feedback_path = os.path.join("fixed_output", "project_feedback.txt")
-    with open(feedback_path, "w") as f:
-        f.write(full_feedback)
-
-    print("📄 Project-Level Feedback saved to:", feedback_path)
-
     if args.fix:
         print("\n🤖 Running Auto Fixer (LLaMA 3)...")
         combined_code = read_all_code(args.path)
         fixed_code = auto_fix_code(combined_code)
 
         # Save fixed code
-        output_path = os.path.join("fixed_output", "fixed_project.py")
-        with open(output_path, "w") as f:
+        os.makedirs("fixed_output", exist_ok=True)
+        fixed_path = os.path.join("fixed_output", "fixed_project.py")
+        with open(fixed_path, "w") as f:
             f.write(fixed_code)
-        print(f"\n✅ Fixed Code Saved: {output_path}")
+        print(f"\n✅ Fixed Code Saved: {fixed_path}")
 
-        # 🧠 Generate AI summary of changes
+        # Optimize fixed code
+        print("\n⚙️ Optimizing Fixed Code...")
+        optimized_code = optimize_code(fixed_code)
+        optimized_path = os.path.join("fixed_output", "optimized_project.py")
+        with open(optimized_path, "w") as f:
+            f.write(optimized_code)
+        print(f"✅ Optimized Code Saved: {optimized_path}")
+
+        # Generate summary
         print("\n🧠 Generating AI Summary of Fixes...")
-
         summary_prompt = f"""
         Here is the original Python project followed by the fixed version.
 
@@ -82,13 +79,18 @@ def main():
         ```python
         {combined_code}
         ```
+
         FIXED VERSION:
         ```python
         {fixed_code}
-        ```"""
+        ```
 
+        OPTIMIZED VERSION:
+        ```python
+        {optimized_code}
+        ```
+        """
         summary = ask_llama(summary_prompt)
-
         print("\n📋 AI Summary of Fixes:")
         print(summary)
 
@@ -96,7 +98,7 @@ def main():
             f.write(summary)
         print("📝 Saved summary to: fixed_output/summary.txt")
 
-        # 🔬 Run pytest on the fixed project (if tests exist)
+        # Run pytest if test files exist
         print("\n🔬 Checking for test files...")
         test_files = [f for f in os.listdir(args.path) if f.startswith("test_") and f.endswith(".py")]
 
@@ -124,6 +126,11 @@ def main():
             with open("fixed_output/test_report.txt", "w") as f:
                 f.write(result.stdout)
             print("📝 Saved pytest report to: fixed_output/test_report.txt")
+
+            # 🧹 Cleanup test files
+            for test_file in test_files:
+                os.remove(os.path.join("fixed_output", test_file))
+            print("🧹 Removed temporary test files from fixed_output/")
         else:
             print("❌ No test_*.py files found. Skipping pytest.")
 
