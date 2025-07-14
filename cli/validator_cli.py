@@ -3,24 +3,8 @@ import os
 import subprocess
 from validator.bug_checker import analyze_project_folder
 from validator.concept_checker import analyze_project_concept
-from validator.auto_corrector import auto_fix_code
+from validator.auto_corrector import auto_fix_project_separately
 from utils.ollama_client import ask_llama
-
-
-def read_all_code(folder_path):
-    """
-    Combine all .py file contents from a folder into one string.
-    Used for sending full codebase to LLaMA for fixing.
-    """
-    combined_code = ""
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if file.endswith(".py"):
-                file_path = os.path.join(root, file)
-                with open(file_path, "r") as f:
-                    code = f.read()
-                combined_code += f"\n\n# === {file} ===\n{code}"
-    return combined_code
 
 
 def main():
@@ -43,51 +27,27 @@ def main():
 
     if args.fix:
         print("\n🤖 Running Auto Fixer (LLaMA 3)...")
-        combined_code = read_all_code(args.path)
-        fixed_code = auto_fix_code(combined_code)
+        fixed_files = auto_fix_project_separately(args.path)
 
-        # Save fixed code
-        os.makedirs("fixed_output", exist_ok=True)
-        output_path = os.path.join("fixed_output", "fixed_project.py")
-        with open(output_path, "w") as f:
-            f.write(fixed_code)
-        print(f"\n✅ Fixed Code Saved: {output_path}")
+        print("\n✅ All fixed files saved in 'fixed_output/'")
 
-        # 🧠 Generate AI summary of changes
+        # 🧠 Generate AI summary
         print("\n🧠 Generating AI Summary of Fixes...")
-
-        summary_prompt = f"""
-        Here is the original Python project followed by the fixed version.
-
-        Explain what changes were made:
-        - What bugs were fixed?
-        - What optimizations or improvements were done?
-        - What parts were unnecessary and removed?
-        - What is the overall improvement?
-
-        Be clear, list important points as bullet points.
-
-        ORIGINAL CODE:
-        ```python
-        {combined_code}
-        ```
-        FIXED VERSION:
-        ```python
-        {fixed_code}
-        ```"""
+        summary_prompt = "Explain the improvements and fixes made to each file:\n"
+        for file_path, fixed_code in fixed_files.items():
+            summary_prompt += f"\n\n📄 File: {file_path}\n```python\n{fixed_code}\n```"
 
         summary = ask_llama(summary_prompt)
 
         print("\n📋 AI Summary of Fixes:")
         print(summary)
 
-        with open(os.path.join("fixed_output", "summary.txt"), "w") as f:
+        with open("fixed_output/summary.txt", "w") as f:
             f.write(summary)
         print("📝 Saved summary to: fixed_output/summary.txt")
 
-        # 🔬 Run pytest on the fixed project (if tests exist)
+        # 🔬 Check for test files and run pytest
         print("\n🔬 Checking for test files...")
-
         test_files = [f for f in os.listdir(args.path) if f.startswith("test_") and f.endswith(".py")]
 
         if test_files:
