@@ -7,7 +7,7 @@ from validator.bug_checker import analyze_project_folder
 from validator.concept_checker import analyze_project_concept
 from validator.auto_corrector import auto_fix_code
 from utils.ollama_client import ask_llama
-from utils.test_generator import generate_pytest_file  # Only needed if tests will be auto-created
+
 
 def read_all_code(folder_path):
     combined_code = ""
@@ -32,12 +32,22 @@ def main():
 
     args = parser.parse_args()
 
-    # ✅ BUG CHECKER
+    # ✅ Bug Checker
     if args.bugs:
         print("🔍 Running Bug Checker...")
         bug_results = analyze_project_folder(args.path)
         for file, result in bug_results.items():
             print(f"\n📄 {file} - Bugs Found:\n{result}")
+
+    # ✅ Concept Checker
+    if args.concept_check:
+        if not args.concept:
+            print("❌ Concept Checker requires --concept argument.")
+        else:
+            print("\n🧠 Running Concept Checker...")
+            concept_results = analyze_project_concept(args.path, args.concept)
+            for file, result in concept_results.items():
+                print(f"\n📄 {file} - Concept Match:\n{result}")
 
 
 if __name__ == "__main__":
