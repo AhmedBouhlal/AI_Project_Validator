@@ -43,8 +43,18 @@ def main():
         print("\n🤖 Running Auto Fixer (LLaMA 3)...")
         combined_code = read_all_code(args.path)
         fixed_code = auto_fix_code(combined_code)
-        print("\n✅ Fixed Version:\n")
-        print(fixed_code)
+
+        print("\n✅ Fixed Code Generated. Saving to 'fixed_output/fixed_project.py'...")
+
+        # Create output directory
+        os.makedirs("fixed_output", exist_ok=True)
+        output_path = os.path.join("fixed_output", "fixed_project.py")
+
+        with open(output_path, "w") as f:
+            f.write(fixed_code)
+
+        print(f"📝 Saved: {output_path}")
+
 
 
 if __name__ == "__main__":
