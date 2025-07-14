@@ -1,21 +1,26 @@
-from utils.ollama_client import ask_llama
+# validator/optimizer.py
 
-def optimize_code(code: str, goal: str = "Make this code cleaner, more readable, and optimized.") -> str:
+def optimize_code(code: str) -> str:
     """
-    Use LLaMA to intelligently refactor and optimize the given Python code.
+    Perform basic optimizations on the Python code.
+    This can be extended to include linting, formatting, or refactoring.
+
+    Args:
+        code (str): Python source code
+
+    Returns:
+        str: Optimized code
     """
-    prompt = f"""
-    You are an expert Python architect and code optimizer.
-
-    GOAL:
-    {goal}
-
-    Code to optimize:
-    ```python
-    {code}
-    ```
-
-    Return only the optimized Python code.
-    """
-    optimized_code = ask_llama(prompt)
-    return optimized_code
+    # Example: remove extra blank lines (very basic)
+    lines = code.split("\n")
+    cleaned = []
+    blank = False
+    for line in lines:
+        if line.strip() == "":
+            if not blank:
+                cleaned.append("")
+                blank = True
+        else:
+            cleaned.append(line)
+            blank = False
+    return "\n".join(cleaned)
