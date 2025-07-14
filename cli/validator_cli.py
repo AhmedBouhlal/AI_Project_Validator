@@ -1,5 +1,6 @@
 import argparse
 import os
+import subprocess
 from validator.bug_checker import analyze_project_folder
 from validator.concept_checker import analyze_project_concept
 from validator.auto_corrector import auto_fix_code
@@ -73,8 +74,7 @@ def main():
         FIXED VERSION:
         ```python
         {fixed_code}
-        ```
-        """
+        ```"""
 
         summary = ask_llama(summary_prompt)
 
@@ -84,6 +84,38 @@ def main():
         with open(os.path.join("fixed_output", "summary.txt"), "w") as f:
             f.write(summary)
         print("📝 Saved summary to: fixed_output/summary.txt")
+
+        # 🔬 Run pytest on the fixed project (if tests exist)
+        print("\n🔬 Checking for test files...")
+
+        test_files = [f for f in os.listdir(args.path) if f.startswith("test_") and f.endswith(".py")]
+
+        if test_files:
+            print(f"🧪 Found test files: {test_files}")
+            for test_file in test_files:
+                original_path = os.path.join(args.path, test_file)
+                destination_path = os.path.join("fixed_output", test_file)
+                with open(original_path, "r") as src, open(destination_path, "w") as dst:
+                    dst.write(src.read())
+
+            print("🚀 Running pytest on fixed_output/...")
+
+            result = subprocess.run(
+                ["pytest", "."],
+                cwd="fixed_output",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+
+            print("\n🧪 Pytest Output:\n")
+            print(result.stdout)
+
+            with open("fixed_output/test_report.txt", "w") as f:
+                f.write(result.stdout)
+            print("📝 Saved pytest report to: fixed_output/test_report.txt")
+        else:
+            print("❌ No test_*.py files found. Skipping pytest.")
 
 
 if __name__ == "__main__":
