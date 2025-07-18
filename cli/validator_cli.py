@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import subprocess
 import shutil
 
@@ -10,6 +11,7 @@ from utils.ollama_client import ask_llama
 
 
 def main():
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     parser = argparse.ArgumentParser(description="🧠 AI Project Validator CLI")
     parser.add_argument("--path", required=True, help="Path to Python project folder")
     parser.add_argument("--concept", help="Project concept/description")
